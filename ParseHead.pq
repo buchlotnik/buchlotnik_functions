@@ -12,7 +12,7 @@
                             (x)=>[i=x[i]+1,l=lst{i},o=f(l,x[o])],
                             (x)=>g(x[o])
                         ),
-    out = Table.RenameColumns(Table.Range(table,num),List.Zip({Table.ColumnNames(table),gen}))
+    out = Table.RenameColumns(Table.TransformColumns(Table.Range(table,num),{},Text.From),List.Zip({Table.ColumnNames(table),gen}))
     ][out],
     typ = type function (
                 table as (type table meta [Documentation.FieldCaption = "исходная таблица"]),
