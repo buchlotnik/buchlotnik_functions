@@ -1,6 +1,6 @@
 [func=(table,num,optional delim,optional fill)=>
    [
-    lst = List.Buffer(Table.ToColumns(Table.Range(table,0,num))), 
+    lst = List.Buffer(Table.ToColumns(Table.TransformColumns(Table.Range(table,0,num),{},Text.From))), 
     delim = if delim=null then " " else delim,
     f=(x,y)=>List.Accumulate(   List.Zip({x,y}),
                                 [i=false,j={}],
@@ -12,7 +12,7 @@
                             (x)=>[i=x[i]+1,l=lst{i},o=f(l,x[o])],
                             (x)=>g(x[o])
                         ),
-    out = Table.RenameColumns(Table.TransformColumns(Table.Range(table,num),{},Text.From),List.Zip({Table.ColumnNames(table),gen}))
+    out = Table.RenameColumns(Table.Range(table,num),List.Zip({Table.ColumnNames(table),gen}))
     ][out],
     typ = type function (
                 table as (type table meta [Documentation.FieldCaption = "исходная таблица"]),
