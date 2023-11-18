@@ -1,19 +1,36 @@
-[fxUnzip=(ZIP,optional options as record)=>
-[   bin=#binary({0x50,0x4b,0x03,0x04}),
-    typ=type table [Name=text,Value=binary],
-    u=(x)=>BinaryFormat.ByteOrder(x,ByteOrder.LittleEndian),
-    ui16=u(BinaryFormat.UnsignedInteger16),
-    ui32=u(BinaryFormat.UnsignedInteger32),
-    b=(x)=>BinaryFormat.Binary(x),
-    d=(x)=>Binary.Decompress(x,Compression.Deflate),
-    t=(x)=>BinaryFormat.Transform(b(x),d),
-    g=(x,y,z)=>Binary.Range(x,y,z),
-    e=(x)=>b(ui16(g(x,28,2))),
-    c=(x)=>t(ui32(g(x,18,4))),
-    f=(x)=>BinaryFormat.Text(ui16(g(x,26,2))),
-    get=(x)=>BinaryFormat.Record(
-        if g(x,0,4)=bin 
-        then [Name=f(x),Extr=e(x),Value=c(x),flag=true] 
-        else [flag=false]),
-    lst=BinaryFormat.List(BinaryFormat.Choice(b(30),get), each [flag]=true)(ZIP),
-    to=Table.FromRecords(List.RemoveLastN(lst,1),typ)][to]]
+[
+    fxUnzip=(ZIP,optional options as record)=>
+    [   
+        bin=#binary({0x50,0x4b,0x03,0x04}),
+        typ=type table [Name=text,Value=binary],
+        u=(x)=>BinaryFormat.ByteOrder(x,ByteOrder.LittleEndian),
+        ui16=u(BinaryFormat.UnsignedInteger16),
+        ui32=u(BinaryFormat.UnsignedInteger32),
+        b=(x)=>BinaryFormat.Binary(x),
+        d=(x)=>Binary.Decompress(x,Compression.Deflate),
+        t=(x)=>BinaryFormat.Transform(b(x),d),
+        g=(x,y,z)=>Binary.Range(x,y,z),
+        e=(x)=>b(ui16(g(x,28,2))),
+        c=(x)=>t(ui32(g(x,18,4))),
+        f=(x)=>BinaryFormat.Text(ui16(g(x,26,2))),
+        get=(x)=>BinaryFormat.Record(if g(x,0,4)=bin then [Name=f(x),Extr=e(x),Value=c(x),flag=true] else [flag=false]),
+        lst=BinaryFormat.List(BinaryFormat.Choice(b(30),get), each [flag]=true)(ZIP),
+        to=Table.FromRecords(List.RemoveLastN(lst,1),typ)
+    ][to],
+
+    fxExcelGetRowsAttributes=(file,optional options as record)=>
+    [
+        f=(x)=>[
+                xml=Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes],
+                nms=List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
+                dict=Record.FromList(xml,nms),
+                add = Table.AddIndexColumn(x{1}, "Attributes", Number.From(nms{0}),1),
+                to=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))})
+                ][to],
+        xml=List.Buffer(Table.SelectRows(fxUnzip(file),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
+        xl = Table.SelectRows(Excel.Workbook(file,false),(r)=>r[Kind]="Sheet"),
+        add = Table.AddIndexColumn(xl,"xml"),
+        tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
+        to = Table.CombineColumns(tr,{"xml","Data"},f,"Data")
+    ][to]
+]
