@@ -23,15 +23,16 @@
     fxExcelGetRowsAttributes=(file,optional options as record)=>
     [
         f=(x)=>[
-                xml=Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes],
-                nms=List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
-                dict=Record.FromList(List.Transform(xml,Record.FromTable),nms),
-                add = Table.AddIndexColumn(x{1}, "Attributes", Number.From(nms{0}),1),
-                tr=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))}),
-                to = Table.ReorderColumns(tr,{"Attributes"}&Table.ColumnNames(x{1}))
-                ][to],
-        xml=List.Buffer(Table.SelectRows(fxUnzip(file),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
-        xl = Table.SelectRows(Excel.Workbook(file,false),(r)=>r[Kind]="Sheet"),
+        xml=List.Buffer(Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes]),
+        nms=List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
+        dict=Record.FromList(List.Transform(xml,Record.FromTable),nms),
+        add = Table.AddIndexColumn(x{1}, "Attributes", Number.From(nms{0}),1),
+        tr=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))}),
+        to = Table.ReorderColumns(tr,{"Attributes"}&Table.ColumnNames(x{1}))][to],
+    
+        from=Binary.Buffer(file),
+        xml=List.Buffer(Table.SelectRows(fxUnzip(from),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
+        xl = Table.SelectRows(Excel.Workbook(from,false),(r)=>r[Kind]="Sheet"),
         add = Table.AddIndexColumn(xl,"xml"),
         tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
         to = Table.CombineColumns(tr,{"xml","Data"},f,"Data")
