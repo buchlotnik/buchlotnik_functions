@@ -25,7 +25,8 @@
                 nms=List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
                 dict=Record.FromList(xml,nms),
                 add = Table.AddIndexColumn(x{1}, "Attributes", Number.From(nms{0}),1),
-                to=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))})
+                tr=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))}),
+                to = Table.ReorderColumns(tr,{"Attributes"}&Table.ColumnNames(x{1}))
                 ][to],
         xml=List.Buffer(Table.SelectRows(fxUnzip(file),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
         xl = Table.SelectRows(Excel.Workbook(file,false),(r)=>r[Kind]="Sheet"),
