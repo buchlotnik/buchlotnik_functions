@@ -26,7 +26,7 @@ typ =type function (ZIP as (type binary meta [Documentation.FieldCaption="бин
 
 result = Value.ReplaceType(func,typ)][result],
 
-    fxUnzip2016=[   func = (ZIP, optional cp)=>
+    fxUnzip2016=[ func = (ZIP, optional cp)=>
         [   ui16 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger16, ByteOrder.LittleEndian),
             ui32 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32, ByteOrder.LittleEndian),
             b = (x) => BinaryFormat.Binary(x),
@@ -52,8 +52,7 @@ result = Value.ReplaceType(func,typ)][result],
                                 Documentation.Name = "UnZip (@buchlotnik)",
                                 Documentation.LongDescription = "Функция считывает содержимое zip-архива и возвращает таблицу с полями FileName - имя файла (с путём, если он в подпапке) и Content - бинарное содержимое конкретного файла. Кодировка требуется для корректного распознавания <b>не латинских</b> имён файлов (для офисных документов указывать необязательно), по умолчанию 866 - кодировка DOS <b>с поддержкой кириллицы</b>"        
                                 ],
-    result = Value.ReplaceType(func,typ)
-][result],
+    result = Value.ReplaceType(func,typ)][result],
 
     fxExcelGetRowsAttributes=(file,optional options as record)=>
     [
