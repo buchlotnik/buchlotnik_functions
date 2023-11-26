@@ -1,24 +1,30 @@
 [
     readme="Небольшая библиотека для получения данных из файлов пакета MS Office, недоступных для штатных средств языка M. Как обычно всё открыто и бесплатно - пользуйтесь! @buchlotnik",
 
-    fxUnzip=(ZIP,optional options as record)=>
-    [   
-        bin=#binary({0x50,0x4b,0x03,0x04}),
-        typ=type table [Name=text,Value=binary],
-        u=(x)=>BinaryFormat.ByteOrder(x,ByteOrder.LittleEndian),
-        ui16=u(BinaryFormat.UnsignedInteger16),
-        ui32=u(BinaryFormat.UnsignedInteger32),
-        b=(x)=>BinaryFormat.Binary(x),
-        d=(x)=>Binary.Decompress(x,Compression.Deflate),
-        t=(x)=>BinaryFormat.Transform(b(x),d),
-        g=(x,y,z)=>Binary.Range(x,y,z),
-        e=(x)=>b(ui16(g(x,28,2))),
-        c=(x)=>t(ui32(g(x,18,4))),
-        f=(x)=>BinaryFormat.Text(ui16(g(x,26,2))),
-        get=(x)=>BinaryFormat.Record(if g(x,0,4)=bin then [Name=f(x),Extr=e(x),Value=c(x),flag=true] else [flag=false]),
-        lst=BinaryFormat.List(BinaryFormat.Choice(b(30),get), each [flag]=true)(ZIP),
-        to=Table.FromRecords(List.RemoveLastN(lst,1),typ)
-    ][to],
+    fxUnzip=[func=(ZIP, optional options)=>
+    [
+    encod = [a=options[Encoding]?,b=if a = null then 866 else a][b],
+    compr = (x)=> if x =0 then Compression.None else Compression.Deflate,
+
+    u16 =BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger16,ByteOrder.LittleEndian),
+    u32 =BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32,ByteOrder.LittleEndian),
+
+    get=(x)=>BinaryFormat.Record(
+        if Binary.Range(x,0,4)=#binary({0x50,0x4b,0x03,0x04})
+        then [  Name=BinaryFormat.Text(u16(Binary.Range(x,26,2)),encod),
+                Extr=BinaryFormat.Binary(u16(Binary.Range(x,28,2))),
+                Value=BinaryFormat.Transform(BinaryFormat.Binary(u32(Binary.Range(x,18,4))),(y)=>Binary.Decompress(y,compr(u16(Binary.Range(x,8,2)))))]
+        else []
+    ),
+
+    lst = BinaryFormat.List(BinaryFormat.Choice(BinaryFormat.Binary(30),get),(x)=>x<>[])(ZIP),
+    to = Table.FromRecords(List.RemoveLastN(lst,1),type table [Name=text,Value=binary])][to],
+
+typ =type function (ZIP as (type binary meta [Documentation.FieldCaption="бинароное содержимое (zip, xlsx, docx, pptx и т.д.)"]), optional options as record) as table meta 
+            [Documentation.Name = "fxUnzip (@buchlotnik)",
+            Documentation.LongDescription ="функция считывает содержимое архива и возвращает таблицу с полями:<p> <b>Name</b> - имя файла (с путём к файлу) <p><b>Value</b> - бинароное содержимое файла. <p>Необязательный аргумент <b>options</b> на текущий момент поддерживает следующие поля: <p>1) <b>Encoding</b> - требуется для корректного чтения не латинских имён файлов (по умоланию <b>866 - кириллица</b>)"],
+
+result = Value.ReplaceType(func,typ)][result],
 
     fxExcelGetRowsAttributes=(file,optional options as record)=>
     [
