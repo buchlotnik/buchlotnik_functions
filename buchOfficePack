@@ -22,7 +22,7 @@
 
 typ =type function (ZIP as (type binary meta [Documentation.FieldCaption="ZIP - бинароное содержимое (zip, xlsx, docx, pptx и т.д.)"]), optional options as record) as table meta 
             [Documentation.Name = "fxUnzip (@buchlotnik)",
-            Documentation.LongDescription ="функция считывает содержимое архива и возвращает таблицу с полями:<p> <b>Name</b> - имя файла (с путём к файлу) <p><b>Value</b> - бинароное содержимое файла. <p>Необязательный аргумент <b>options</b> на текущий момент поддерживает следующие поля: <p>1) <b>Encoding</b> - требуется для корректного чтения не латинских имён файлов (по умоланию <b>866 - кириллица</b>)"],
+            Documentation.LongDescription ="функция считывает содержимое архива и возвращает таблицу с полями:<p> <b>Name</b> - имя файла (с путём к файлу) <p><b>Value</b> - бинарное содержимое файла. <p>Необязательный аргумент <b>options</b> на текущий момент поддерживает следующие поля: <p>1) <b>Encoding</b> - требуется для корректного чтения не латинских имён файлов (по умолчанию <b>866 - кириллица</b>)"],
 
 result = Value.ReplaceType(func,typ)][result],
 
