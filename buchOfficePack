@@ -54,21 +54,35 @@ result = Value.ReplaceType(func,typ)][result],
                                 ],
     result = Value.ReplaceType(func,typ)][result],
 
-    fxExcelGetRowsAttributes=(file,optional options as record)=>
-    [
-        f=(x)=>[
-        xml=List.Buffer(Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes]),
-        nms=List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
-        dict=Record.FromList(List.Transform(xml,Record.FromTable),nms),
-        add = Table.AddIndexColumn(x{1}, "Attributes", Number.From(nms{0}),1),
-        tr=Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))}),
-        to = Table.ReorderColumns(tr,{"Attributes"}&Table.ColumnNames(x{1}))][to],
-    
-        from=Binary.Buffer(file),
-        xml=List.Buffer(Table.SelectRows(fxUnzip(from),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
-        xl = Table.SelectRows(Excel.Workbook(from,false),(r)=>r[Kind]="Sheet"),
-        add = Table.AddIndexColumn(xl,"xml"),
-        tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
-        to = Table.CombineColumns(tr,{"xml","Data"},f,"Data")
-    ][to]
+    fxExcelGetRowsAttributes= [func=(filebin,optional options)=>
+
+   [sheetsonly = if options[SheetsOnly]?=true then true else false,
+   fxUnzip = if options[Excel2016]?=true then fxUnzip2016 else fxUnzip,
+      
+      bin = Binary.Buffer(filebin),
+    xml = List.Buffer(Table.SelectRows(fxUnzip(bin),(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
+    wb = Table.Group(Excel.Workbook(bin,false),"Kind",{"tmp",(x)=>x}),
+    xl = wb{[Kind="Sheet"]}[tmp],
+    add = Table.AddIndexColumn(xl,"xml"),
+    tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
+    cmb = Table.CombineColumns(tr,{"xml","Data"},fxExcelSheetAddXmlInformation,"Data"),
+    to = if sheetsonly then cmb else cmb & wb{[Kind="DefinedName"]}[tmp]][to],
+    typ=type function(filebin as binary, optional options as record) as table meta 
+    [Documentation.Name="fxExcelGetRowsAttributes (@buchlotnik)",
+    Documentation.LongDescription="функция повторят действия функции Excel.Workbook, но к таблице каждого листа добавляет информацию об атрибутах строк"],
+    result = Value.ReplaceType(func,typ)][result],
+
+fxExcelSheetAddXmlInformation=[func=(x,optional options)=>
+            [xml = Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes],
+            tr = List.Transform(xml,Record.FromTable),
+            nms = List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
+            dict = Record.FromList(tr,nms),
+            add=Table.AddIndexColumn(x{1},"Attributes",Number.From(nms{0})),
+            tr1 = Table.TransformColumns(add,{"Attributes",(x)=>Record.FieldOrDefault(dict,Text.From(x))}),
+            to = Table.ReorderColumns(tr1,{"Attributes"}&Table.ColumnNames(x{1}))][to],
+    typ=type function(x as list,optional options as record) as table 
+    meta [Documentation.Name="fxExcelSheetAddXmlInformation (@buchlotnik)",
+        Documentation.LongDescription="вспомогательная функция, добавляющая к таблице листа дополнительную информацию из xml-разметки"],
+    result=Value.ReplaceType(func,typ)][result]
+
 ]
