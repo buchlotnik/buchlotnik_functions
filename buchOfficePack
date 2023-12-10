@@ -91,7 +91,7 @@ fxTableRemoveEmptyColumns=[func =(table, optional options)=>
     to = Table.RemoveColumns(table,lst)][to],
 typ=type function (table as table, optional options as record) as table meta 
 [Documentation.Name="fxTableRemoveEmptyColumns (@buchlotnik)",
-Documentation.Options="функция, удаляющая пустые столбцы из таблицы"],
+Documentation.LongDescription="функция, удаляющая пустые столбцы из таблицы"],
 result = Value.ReplaceType(func,typ)
 ][result]
 
