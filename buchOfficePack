@@ -83,6 +83,16 @@ fxExcelSheetAddXmlInformation=[func=(x,optional options)=>
     typ=type function(x as list,optional options as record) as table 
     meta [Documentation.Name="fxExcelSheetAddXmlInformation (@buchlotnik)",
         Documentation.LongDescription="вспомогательная функция, добавляющая к таблице листа дополнительную информацию из xml-разметки"],
-    result=Value.ReplaceType(func,typ)][result]
+    result=Value.ReplaceType(func,typ)][result],
+
+fxTableRemoveEmptyColumns=[func =(table, optional options)=>
+    [tbl = Table.Buffer(Table.Profile(table)),
+    lst = Table.SelectRows(tbl,(r)=>r[Count]=r[NullCount])[Column],
+    to = Table.RemoveColumns(table,lst)][to],
+typ=type function (table as table, optional options as record) as table meta 
+[Documentation.Name="fxTableRemoveEmptyColumns (@buchlotnik)",
+Documentation.Options="функция, удаляющая пустые столбцы из таблицы"],
+result = Value.ReplaceType(func,typ)
+][result]
 
 ]
