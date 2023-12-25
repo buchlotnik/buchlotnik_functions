@@ -94,7 +94,7 @@ typ=type function (table as table, optional options as record) as table meta
 Documentation.LongDescription="функция, удаляющая пустые столбцы из таблицы"],
 result = Value.ReplaceType(func,typ)
 ][result],
-fxGetDataMashup=(file)=>
+fxGetMCode=(file)=>
     [u32 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32,ByteOrder.LittleEndian),
     f=(x)=>[a=Text.Split(x," = "),b={Text.Trim(Text.Replace(a{0},"shared","")),Text.Combine(List.Skip(a)," = ")}][b],
     from = fxUnzip(file){[Name="customXml/item1.xml"]}?[Value]?,
