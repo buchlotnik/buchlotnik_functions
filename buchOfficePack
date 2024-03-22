@@ -75,7 +75,8 @@ result = Value.ReplaceType(func,typ)][result],
 
 fxExcelSheetAddXmlInformation=[func=(x,optional options)=>
             [xml = Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Attributes],
-            tr = List.Transform(xml,Record.FromTable),
+            xml1 = Xml.Document(x{0}){0}[Value]{[Name="sheetData"]}[Value][Value],
+            tr =if options[Cells]?=true then  List.Transform(xml1,(x)=>[a=x{0}?[Attributes]?,b=if a=null then [] else Record.FromTable(a)][b]) else List.Transform(xml,Record.FromTable),
             nms = List.Transform(xml,(x)=>x{[Name="r"]}?[Value]?),
             dict = Record.FromList(tr,nms),
             add=Table.AddIndexColumn(x{1},"Attributes",Number.From(nms{0})),
@@ -133,6 +134,26 @@ fxParseHead= [func=(table,num,optional delim,optional fill)=>
                     Documentation.Name = "ParsHead", 
                     Documentation.Description = "функция анализирует первые несколько строк таблицы <i><b>table</b></i>, указанных в параметре  <i><b>num</b></i>, осуществляет заполнение ячеек (по принципу ""fillrigth"") при условии, что ячейки в текущем столбце выше пусты, далее по столбцам идёт объединение текста с использованием в качестве разделителя параметра  <i><b>delim</b></i>. Опционально четвертый параметр <i><b>fill</b></i> позволяет задать строковое значение, которое будет использовано для заголовков нижних уровней в случае их отсутствия в данном столбце "
                     ],
-    res=Value.ReplaceType(func,typ)][res]
+    res=Value.ReplaceType(func,typ)][res],
+
+fxExcelGetCellAttributes=[func=(filebin,optional options)=>
+
+   [bin = Binary.Buffer(filebin),
+   unbin=fxUnzip(bin),
+   xml = List.Buffer(Table.SelectRows(unbin,(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
+    style = List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}[Value]){0}[Value]{[Name="cellXfs"]}[Value][Attributes],Record.FromTable)),
+    wb = Table.Group(Excel.Workbook(bin,false),"Kind",{"tmp",(x)=>x}),
+    xl = wb{[Kind="Sheet"]}[tmp],
+    add = Table.AddIndexColumn(xl,"xml"),
+    tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
+    cmb = Table.CombineColumns(tr,{"xml","Data"},(x)=>fxExcelSheetAddXmlInformation(x,[Cells=true]),"Data"),
+    styledetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else style{Number.From(a)}][b]}),
+    rep= if options[StyleDetails]?=true then Table.TransformColumns(cmb,{"Data",styledetails}) else cmb,
+    def=[a=wb{[Kind="DefinedName"]}?[tmp]?,b=if a = null then #table({},{}) else a][b],
+    to = if options[SheetsOnly]?=true then rep else rep & def][to],
+    typ=type function(filebin as binary, optional options as record) as table meta 
+    [Documentation.Name="fxExcelGetCellAttributes (@buchlotnik)",
+    Documentation.LongDescription="функция повторят действия функции Excel.Workbook, но к таблице каждого листа добавляет информацию об атрибутах ячейки первого столбца каждой из строк"],
+    result = Value.ReplaceType(func,typ)][result]
 
 ]
