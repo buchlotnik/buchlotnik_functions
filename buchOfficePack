@@ -114,7 +114,7 @@ fxParseHead= [func=(table,num,optional delim,optional fill)=>
     delim = if delim=null then " " else delim,
     f=(x,y)=>List.Accumulate(   List.Zip({x,y}),
                                 [i=false,j={}],
-                                (s,c)=>[i=s[i]=true or c{0}<>null,j=if i then s[j]&{c{0}} else s[j]&{c{0}??c{1}}]
+                                (s,c)=>[i=s[i]=true or c{0}<>null,j=if i then s[j]&{c{0}} else s[j]&{if c{0}=null then c{1} else c{0}}]
                             )[j],
     g=(x)=>if fill=null then Text.Combine(x,delim) else Text.Combine(List.ReplaceValue(x,null,fill,Replacer.ReplaceValue),delim), 
     gen = List.Generate(    ()=>[i=0,l=lst{i},o=l],
