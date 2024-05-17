@@ -150,7 +150,7 @@ alignment= List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}
     cmb = Table.CombineColumns(tr,{"xml","Data"},(x)=>fxExcelSheetAddXmlInformation(x,[Cells=true]),"Data"),
 styledetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else style{Number.From(a)}][b]}),
 alignmentdetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else alignment {Number.From(a)}][b]}),
-    rep= if options[StyleDetails]?=true then Table.TransformColumns(cmb,{"Data",styledetails}) else if options[Alignment]?=true then Table.TransformColumns(cmb,{"Data", alignment }) else cmb,
+    rep= if options[StyleDetails]?=true then Table.TransformColumns(cmb,{"Data",styledetails}) else if options[Alignment]?=true then Table.TransformColumns(cmb,{"Data", alignmentdetails }) else cmb,
     def=[a=wb{[Kind="DefinedName"]}?[tmp]?,b=if a = null then #table({},{}) else a][b],
     to = if options[SheetsOnly]?=true then rep else rep & def][to]
 ,
