@@ -54,6 +54,19 @@ result = Value.ReplaceType(func,typ)][result],
                                 ],
     result = Value.ReplaceType(func,typ)][result],
 
+fxGetMCode=(file)=>
+    [u32 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32,ByteOrder.LittleEndian),
+    f=(x)=>[a=Text.Split(x," = "),b={Text.Trim(Text.Replace(a{0},"shared","")),Text.Combine(List.Skip(a)," = ")}][b],
+    from = fxUnzip(file){[Name="customXml/item1.xml"]}?[Value]?,
+    bin = Binary.FromText(Xml.Document(from){0}[Value],BinaryEncoding.Base64),
+    data = BinaryFormat.Choice(BinaryFormat.Binary(8),(x)=>BinaryFormat.Binary(u32(Binary.Range(x,4,4))))(bin),
+    unz = fxUnzip(data){[Name="Formulas/Section1.m"]}[Value],
+    txt = Text.FromBinary(unz)&"#(cr,lf)",
+    splt = Text.Split(txt,";#(cr,lf)"),
+    lst = List.Range(splt,1,List.Count(splt)-2),
+    tbl = Table.FromList(lst,f,{"Name","Value"}),
+    to = if from=null then #table({"Name","Value"},{{null,null}}) else tbl][to],
+
     fxExcelGetRowsAttributes= [func=(filebin,optional options)=>
 
    [sheetsonly = if options[SheetsOnly]?=true then true else false,
@@ -87,6 +100,29 @@ fxExcelSheetAddXmlInformation=[func=(x,optional options)=>
         Documentation.LongDescription="вспомогательная функция, добавляющая к таблице листа дополнительную информацию из xml-разметки"],
     result=Value.ReplaceType(func,typ)][result],
 
+fxExcelGetCellAttributes=[func=(filebin,optional options)=>
+
+   [bin = Binary.Buffer(filebin),
+   unbin=fxUnzip(bin),
+   xml = List.Buffer(Table.SelectRows(unbin,(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
+style = List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}[Value]){0}[Value]{[Name="cellXfs"]}[Value][Attributes],Record.FromTable)),
+alignment= List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}[Value]){0}[Value]{[Name="cellXfs"]}[Value][Value],(x)=>x{[Name="alignment"]}?[Attributes]?{[Name="indent"]}?[Value]?)),
+    wb = Table.Group(Excel.Workbook(bin,false),"Kind",{"tmp",(x)=>x}),
+    xl = wb{[Kind="Sheet"]}[tmp],
+    add = Table.AddIndexColumn(xl,"xml"),
+    tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
+    cmb = Table.CombineColumns(tr,{"xml","Data"},(x)=>fxExcelSheetAddXmlInformation(x,[Cells=true]),"Data"),
+styledetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else style{Number.From(a)}][b]}),
+alignmentdetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else alignment {Number.From(a)}][b]}),
+    rep= if options[StyleDetails]?=true then Table.TransformColumns(cmb,{"Data",styledetails}) else if options[Indent]?=true then Table.TransformColumns(cmb,{"Data", alignmentdetails }) else cmb,
+    def=[a=wb{[Kind="DefinedName"]}?[tmp]?,b=if a = null then #table({},{}) else a][b],
+    to = if options[SheetsOnly]?=true then rep else rep & def][to]
+,
+    typ=type function(filebin as binary, optional options as record) as table meta 
+    [Documentation.Name="fxExcelGetCellAttributes (@buchlotnik)",
+    Documentation.LongDescription="функция повторят действия функции Excel.Workbook, но к таблице каждого листа добавляет информацию об атрибутах ячейки первого столбца каждой из строк"],
+    result = Value.ReplaceType(func,typ)][result],
+
 fxTableRemoveEmptyColumns=[func =(table, optional options)=>
     [tbl = Table.Buffer(Table.Profile(table)),
     lst = Table.SelectRows(tbl,(r)=>r[Count]=r[NullCount])[Column],
@@ -96,18 +132,34 @@ typ=type function (table as table, optional options as record) as table meta
 Documentation.LongDescription="функция, удаляющая пустые столбцы из таблицы"],
 result = Value.ReplaceType(func,typ)
 ][result],
-fxGetMCode=(file)=>
-    [u32 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32,ByteOrder.LittleEndian),
-    f=(x)=>[a=Text.Split(x," = "),b={Text.Trim(Text.Replace(a{0},"shared","")),Text.Combine(List.Skip(a)," = ")}][b],
-    from = fxUnzip(file){[Name="customXml/item1.xml"]}?[Value]?,
-    bin = Binary.FromText(Xml.Document(from){0}[Value],BinaryEncoding.Base64),
-    data = BinaryFormat.Choice(BinaryFormat.Binary(8),(x)=>BinaryFormat.Binary(u32(Binary.Range(x,4,4))))(bin),
-    unz = fxUnzip(data){[Name="Formulas/Section1.m"]}[Value],
-    txt = Text.FromBinary(unz)&"#(cr,lf)",
-    splt = Text.Split(txt,";#(cr,lf)"),
-    lst = List.Range(splt,1,List.Count(splt)-2),
-    tbl = Table.FromList(lst,f,{"Name","Value"}),
-    to = if from=null then #table({"Name","Value"},{{null,null}}) else tbl][to],
+
+fxTableSetColumnTypes=[func=(tbl as table,optional options as record) as table=>
+[
+    n=if options[rows]?=null then 100 else options[rows],
+    cul=if options[culture]?=null then "ru" else options[culture],
+    tr = if options[transform]?=null then true else options[transform],
+    f_val = if options[deep]?=true then g else Value.Type,
+    f_tr = if tr then (x)=>f_val(Value.FromText(x,cul)) else f_val,
+    f_lst = (x)=>Type.Union(List.Transform(x,f_tr)),
+    
+    g=(x)=>if x is number then if Number.Mod(x,1)=0 then Int64.Type else Number.Type
+            else if x is datetime then 
+                if Date.Year(x)=1899 then Time.Type meta [f=true] 
+                else if Time.From(x)=#time(0,0,0) then Date.Type meta [f=true] 
+                else DateTime.Type
+            else Value.Type(x),    
+    
+    set = List.Buffer(List.Transform(List.Zip(List.FirstN(Table.ToList(tbl,(x)=>x),n)),f_lst)),
+    nms = List.Buffer(Table.ColumnNames(tbl)),
+    zip = List.Zip({nms,set}),
+    trlst=if tr then zip else List.Select(zip,(x)=>Value.Metadata(x{1})[f]?=true),
+    typ = type table Type.ForRecord(Record.FromList(List.Transform(set,(x)=>[Type=x,Optional=false]),nms),false),
+    to = Value.ReplaceType(Table.TransformColumnTypes(tbl,trlst,cul),typ)][to],
+
+metadata=[Documentation.Name="fxTableSetColumnTypes",
+            Documentation.LongDescription="функция, типизирующая столбцы таблицы на основании их значений. <p> Обязательный аргумент - <b>таблица</b> <p> Необязательный аргумент - <b>запись</b> с допустимыми полями:<p> <b>culture</b> - локаль, которую следует использовать при преобразовании типов столбцов <p> <b>rows</b> - количество строк, по которым определяется тип (по умолчанию 100), <p> <b>transform</b> - показывает, нужно ли преобразовывать значения в столбцах или констатировать текущие, по умолчанию <i> true </i>  <p> <b> deep</b> - глубокая оценка,  по умолчанию <i>false</i> (если <i>true</i> - анализирует числа на наличие целых, анализирует датывремена на наличие просто даты или просто времени)"],
+to = Value.ReplaceType(func,Value.Type(func) meta metadata)][to],
+
 fxParseHead= [func=(table,num,optional delim,optional fill)=>
    [
     lst = List.Buffer(Table.ToColumns(Table.TransformColumns(Table.Range(table,0,num),{},Text.From))), 
@@ -134,55 +186,9 @@ fxParseHead= [func=(table,num,optional delim,optional fill)=>
                     Documentation.Name = "ParsHead", 
                     Documentation.Description = "функция анализирует первые несколько строк таблицы <i><b>table</b></i>, указанных в параметре  <i><b>num</b></i>, осуществляет заполнение ячеек (по принципу ""fillrigth"") при условии, что ячейки в текущем столбце выше пусты, далее по столбцам идёт объединение текста с использованием в качестве разделителя параметра  <i><b>delim</b></i>. Опционально четвертый параметр <i><b>fill</b></i> позволяет задать строковое значение, которое будет использовано для заголовков нижних уровней в случае их отсутствия в данном столбце "
                     ],
-    res=Value.ReplaceType(func,typ)][res],
+    res=Value.ReplaceType(func,typ)][res]
 
-fxExcelGetCellAttributes=[func=(filebin,optional options)=>
 
-   [bin = Binary.Buffer(filebin),
-   unbin=fxUnzip(bin),
-   xml = List.Buffer(Table.SelectRows(unbin,(r)=>Text.StartsWith(r[Name],"xl/worksheets/sheet"))[Value]),
-style = List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}[Value]){0}[Value]{[Name="cellXfs"]}[Value][Attributes],Record.FromTable)),
-alignment= List.Buffer(List.Transform(Xml.Document(unbin{[Name="xl/styles.xml"]}[Value]){0}[Value]{[Name="cellXfs"]}[Value][Value],(x)=>x{[Name="alignment"]}?[Attributes]?{[Name="indent"]}?[Value]?)),
-    wb = Table.Group(Excel.Workbook(bin,false),"Kind",{"tmp",(x)=>x}),
-    xl = wb{[Kind="Sheet"]}[tmp],
-    add = Table.AddIndexColumn(xl,"xml"),
-    tr = Table.TransformColumns(add,{"xml",(x)=>xml{x}}),
-    cmb = Table.CombineColumns(tr,{"xml","Data"},(x)=>fxExcelSheetAddXmlInformation(x,[Cells=true]),"Data"),
-styledetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else style{Number.From(a)}][b]}),
-alignmentdetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if a=null then [] else alignment {Number.From(a)}][b]}),
-    rep= if options[StyleDetails]?=true then Table.TransformColumns(cmb,{"Data",styledetails}) else if options[Indent]?=true then Table.TransformColumns(cmb,{"Data", alignmentdetails }) else cmb,
-    def=[a=wb{[Kind="DefinedName"]}?[tmp]?,b=if a = null then #table({},{}) else a][b],
-    to = if options[SheetsOnly]?=true then rep else rep & def][to]
-,
-    typ=type function(filebin as binary, optional options as record) as table meta 
-    [Documentation.Name="fxExcelGetCellAttributes (@buchlotnik)",
-    Documentation.LongDescription="функция повторят действия функции Excel.Workbook, но к таблице каждого листа добавляет информацию об атрибутах ячейки первого столбца каждой из строк"],
-    result = Value.ReplaceType(func,typ)][result],
-fxTableSetColumnTypes=[func=(tbl as table,optional options as record) as table=>
-[
-    n=if options[rows]?=null then 100 else options[rows],
-    cul=if options[culture]?=null then "ru" else options[culture],
-    tr = if options[transform]?=null then true else options[transform],
-    f_val = if options[deep]?=true then g else Value.Type,
-    f_tr = if tr then (x)=>f_val(Value.FromText(x,cul)) else f_val,
-    f_lst = (x)=>Type.Union(List.Transform(x,f_tr)),
-    
-    g=(x)=>if x is number then if Number.Mod(x,1)=0 then Int64.Type else Number.Type
-            else if x is datetime then 
-                if Date.Year(x)=1899 then Time.Type meta [f=true] 
-                else if Time.From(x)=#time(0,0,0) then Date.Type meta [f=true] 
-                else DateTime.Type
-            else Value.Type(x),    
-    
-    set = List.Buffer(List.Transform(List.Zip(List.FirstN(Table.ToList(tbl,(x)=>x),n)),f_lst)),
-    nms = List.Buffer(Table.ColumnNames(tbl)),
-    zip = List.Zip({nms,set}),
-    trlst=if tr then zip else List.Select(zip,(x)=>Value.Metadata(x{1})[f]?=true),
-    typ = type table Type.ForRecord(Record.FromList(List.Transform(set,(x)=>[Type=x,Optional=false]),nms),false),
-    to = Value.ReplaceType(Table.TransformColumnTypes(tbl,trlst,cul),typ)][to],
 
-metadata=[Documentation.Name="fxTableSetColumnTypes",
-            Documentation.LongDescription="функция, типизирующая столбцы таблицы на основании их значений. <p> Обязательный аргумент - <b>таблица</b> <p> Необязательный аргумент - <b>запись</b> с допустимыми полями:<p> <b>culture</b> - локаль, которую следует использовать при преобразовании типов столбцов <p> <b>rows</b> - количество строк, по которым определяется тип (по умолчанию 100), <p> <b>transform</b> - показывает, нужно ли преобразовывать значения в столбцах или констатировать текущие, по умолчанию <i> true </i>  <p> <b> deep</b> - глубокая оценка,  по умолчанию <i>false</i> (если <i>true</i> - анализирует числа на наличие целых, анализирует датывремена на наличие просто даты или просто времени)"],
-to = Value.ReplaceType(func,Value.Type(func) meta metadata)][to]
 
 ]
