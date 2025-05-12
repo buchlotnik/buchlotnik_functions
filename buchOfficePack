@@ -157,6 +157,32 @@ alignmentdetails=(x)=>Table.TransformColumns(x,{"Attributes",(y)=>[a=y[s]?,b=if 
     typ=type function(filebin as binary, optional options as record) as table meta 
     [Documentation.Name="fxExcelGetCellAttributes (@buchlotnik)",
     Documentation.LongDescription="функция повторят действия функции Excel.Workbook, но к таблице каждого листа добавляет информацию об атрибутах ячейки первого столбца каждой из строк"],
-    result = Value.ReplaceType(func,typ)][result]
+    result = Value.ReplaceType(func,typ)][result],
+fxTableSetColumnTypes=[func=(tbl as table,optional options as record) as table=>
+[
+    n=if options[rows]?=null then 100 else options[rows],
+    cul=if options[culture]?=null then "ru" else options[culture],
+    tr = if options[transform]?=null then true else options[transform],
+    f_val = if options[deep]?=true then g else Value.Type,
+    f_tr = if tr then (x)=>f_val(Value.FromText(x,cul)) else f_val,
+    f_lst = (x)=>Type.Union(List.Transform(x,f_tr)),
+    
+    g=(x)=>if x is number then if Number.Mod(x,1)=0 then Int64.Type else Number.Type
+            else if x is datetime then 
+                if Date.Year(x)=1899 then Time.Type meta [f=true] 
+                else if Time.From(x)=#time(0,0,0) then Date.Type meta [f=true] 
+                else DateTime.Type
+            else Value.Type(x),    
+    
+    set = List.Buffer(List.Transform(List.Zip(List.FirstN(Table.ToList(tbl,(x)=>x),n)),f_lst)),
+    nms = List.Buffer(Table.ColumnNames(tbl)),
+    zip = List.Zip({nms,set}),
+    trlst=if tr then zip else List.Select(zip,(x)=>Value.Metadata(x{1})[f]?=true),
+    typ = type table Type.ForRecord(Record.FromList(List.Transform(set,(x)=>[Type=x,Optional=false]),nms),false),
+    to = Value.ReplaceType(Table.TransformColumnTypes(tbl,trlst,cul),typ)][to],
+
+metadata=[Documentation.Name="fxTableSetColumnTypes",
+            Documentation.LongDescription="функция, типизирующая столбцы таблицы на основании их значений. <p> Обязательный аргумент - <b>таблица</b> <p> Необязательный аргумент - <b>запись</b> с допустимыми полями:<p> <b>culture</b> - локаль, которую следует использовать при преобразовании типов столбцов <p> <b>rows</b> - количество строк, по которым определяется тип (по умолчанию 100), <p> <b>transform</b> - показывает, нужно ли преобразовывать значения в столбцах или констатировать текущие, по умолчанию <i> true </i>  <p> <b> deep</b> - глубокая оценка,  по умолчанию <i>false</i> (если <i>true</i> - анализирует числа на наличие целых, анализирует датывремена на наличие просто даты или просто времени)"],
+to = Value.ReplaceType(func,Value.Type(func) meta metadata)][to]
 
 ]
