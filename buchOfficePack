@@ -156,7 +156,7 @@ fxTableSetColumnTypes=[func=(tbl as table,optional options as record) as table=>
     typ = type table Type.ForRecord(Record.FromList(List.Transform(set,(x)=>[Type=x,Optional=false]),nms),false),
     to = Value.ReplaceType(Table.TransformColumnTypes(tbl,trlst,cul),typ)][to],
 
-metadata=[Documentation.Name="fxTableSetColumnTypes",
+metadata=[Documentation.Name="fxTableSetColumnTypes (@buchlotnik)",
             Documentation.LongDescription="функция, типизирующая столбцы таблицы на основании их значений. <p> Обязательный аргумент - <b>таблица</b> <p> Необязательный аргумент - <b>запись</b> с допустимыми полями:<p> <b>culture</b> - локаль, которую следует использовать при преобразовании типов столбцов <p> <b>rows</b> - количество строк, по которым определяется тип (по умолчанию 100), <p> <b>transform</b> - показывает, нужно ли преобразовывать значения в столбцах или констатировать текущие, по умолчанию <i> true </i>  <p> <b> deep</b> - глубокая оценка,  по умолчанию <i>false</i> (если <i>true</i> - анализирует числа на наличие целых, анализирует датывремена на наличие просто даты или просто времени)"],
 to = Value.ReplaceType(func,Value.Type(func) meta metadata)][to],
 
@@ -183,7 +183,7 @@ fxParseHead= [func=(table,num,optional delim,optional fill)=>
                 optional fill as (type text meta [Documentation.FieldCaption = "(необязательно) строковое значение, подставляемое вместо отсутствующего заголовка"])
                          )           
                 as table meta [
-                    Documentation.Name = "ParsHead", 
+                    Documentation.Name = "ParsHead (@buchlotnik)", 
                     Documentation.Description = "функция анализирует первые несколько строк таблицы <i><b>table</b></i>, указанных в параметре  <i><b>num</b></i>, осуществляет заполнение ячеек (по принципу ""fillrigth"") при условии, что ячейки в текущем столбце выше пусты, далее по столбцам идёт объединение текста с использованием в качестве разделителя параметра  <i><b>delim</b></i>. Опционально четвертый параметр <i><b>fill</b></i> позволяет задать строковое значение, которое будет использовано для заголовков нижних уровней в случае их отсутствия в данном столбце "
                     ],
     res=Value.ReplaceType(func,typ)][res]
