@@ -57,7 +57,7 @@ result = Value.ReplaceType(func,typ)][result],
 fxGetMCode=(file)=>
     [u32 = BinaryFormat.ByteOrder(BinaryFormat.UnsignedInteger32,ByteOrder.LittleEndian),
     f=(x)=>[a=Text.Split(x," = "),b={Text.Trim(Text.Replace(a{0},"shared","")),Text.Combine(List.Skip(a)," = ")}][b],
-    from = fxUnzip(file){[Name="customXml/item1.xml"]}?[Value]?,
+    from = Table.SelectRows(fxUnzip(file),(r)=>Text.Contains(r[Name],"customXml/item") and Xml.Document(r[Value]){0}[Name]="DataMashup"){0}?[Value]?,
     bin = Binary.FromText(Xml.Document(from){0}[Value],BinaryEncoding.Base64),
     data = BinaryFormat.Choice(BinaryFormat.Binary(8),(x)=>BinaryFormat.Binary(u32(Binary.Range(x,4,4))))(bin),
     unz = fxUnzip(data){[Name="Formulas/Section1.m"]}[Value],
