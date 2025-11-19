@@ -1,0 +1,37 @@
+[f=(tbl,val,attr,nom,alg)=>
+let
+    core=(tbl,val,attr,nom,mode,online,alg)=>[   
+    min=(x,y)=>List.PositionOf(x,List.Min(x)),
+    first=(x,y)=>List.PositionOf(x,y{1},Occurrence.First,(c,v)=>c+v<=nom),
+    best=(x,y)=>List.PositionOf(x,List.Max(List.Select(x,(x)=>x+y{1}<=nom))),
+    next=(x,y)=>if x={} or List.Last(x)+y{1}>nom then -1 else List.Count(x)-1,
+    
+    func = {min,first,best,next}{alg},
+    g=(x,y)=>[  pos = func(x,y),
+                val = x{pos},
+                rep = if pos = -1 then x&{y{1} meta [art={y{0}}]} 
+                        else List.ReplaceRange(x,pos,1,{(val+y{1}) meta [art=h(val)&{y{0}}]})][rep],
+    h=(x)=>Value.Metadata(x)[art],
+    tbl=Table.SelectColumns(tbl,{attr,val}),
+    sort = Table.Sort(tbl,{"b",if online=-1 then Order.Descending else Order.Ascending}),
+    lst = Table.ToList(if online=0 then tbl else sort,(x)=>x),
+    n = Number.Round(List.Sum(Table.Column(tbl,val))/nom),
+    seed = if mode=0 then List.Repeat({0 meta [art={}]},n) else {},
+    acc = List.Accumulate(lst,seed,g),
+    typ = type table [Состав=text,Сумма=number],
+    to = Table.FromList(acc,(x)=>{Text.Combine(h(x),", "),x},typ)][to],
+    //mode: 0 balance, 1 pack
+    //online: -1 desc, 0 don't sort, 1 asc
+    //alg: 0 min, 1 fist, 2 best, 3 next
+    map = [LPT={0,-1,0},SPT={0,1,0},FFD={1,-1,1},FF={1,0,1},BFD={1,-1,2},BF={1,0,2},NFD={1,-1,3},NF={1,0,3}]
+    in Function.Invoke(core,{tbl,val,attr,nom}&Record.Field(map,alg)),
+    t = type function (
+        tbl as (type table meta [Documentation.FieldCaption = "исходная таблица"]),
+        val as (type text meta [Documentation.FieldCaption = "столбец значений"]),
+        attr as (type text meta [Documentation.FieldCaption = "столбец атрибутов"]),
+        nom as (type number meta [Documentation.FieldCaption = "опорное значение (номинал/предел)"]),
+        alg as (type text meta [Documentation.FieldCaption = "алгоритм распределения",
+                                Documentation.AllowedValues={"FFD","FD","BFD","BF","NFD","NF","LPT","SPT"}])) 
+        as table meta [Documentation.Name = "TablePack (@buchlotnik)",
+        Documentation.LongDescription = "Эта функция предназначена для задачи распределения ресурсов, включая минимизацию количества контейнеров и выравнивание нагрузки между фиксированным числом ресурсов.<p> Аргументы: <b>tbl</b> - исходная таблица, <b>val</b> - название столбца со значениями, <b>attr</b> - название столбца с атрибутом, <b>nom</b> - опорное значение (номинал для случая распределения нагрузки, предел для случая упаковки в контейнеры), <b>alg</b> - алгоритм.<p>В качестве результата выводится таблица - Состав (перечень атрибутов через запятую) и Сумма (распределённая сумма в данном контейнере)<p>Поддерживает 8 основных аппроксимационных эвристик, задаваемых пятым аргументом:<p><b>FFD</b> - упаковка в первый подходящий (значения по убыванию - офлайн)<p><b>FD</b> - упаковка в первый подходящий (значения в порядке строк таблицы - онлайн)<p><b>BFD</b> - упаковка в максимальный среди подходящих (значения по убыванию - офлайн)<p><b>BF</b> - упаковка в максимальный среди подходящих (значения в порядке строк таблицы - онлайн)<p><b>NFD</b> - упаковка в текущий до его заполнеия, далее в следующий (значения по убыванию - офлайн)<p><b>NF</b> - упаковка в текущий до его заполнеия, далее в следующий (значения в порядке строк таблицы - онлайн)<p><b>LPT</b> - распределение, крупнейшие задачи в первую очередь<p><b>SPT</b> - распределение, кратчайшие задачи в первую очередь"],
+    r=Value.ReplaceType(f,t)][r]
