@@ -13,7 +13,7 @@ let
                         else List.ReplaceRange(x,pos,1,{(val+y{1}) meta [art=h(val)&{y{0}}]})][rep],
     h=(x)=>Value.Metadata(x)[art],
     tbl=Table.SelectColumns(tbl,{attr,val}),
-    sort = Table.Sort(tbl,{"b",if online=-1 then Order.Descending else Order.Ascending}),
+    sort = Table.Sort(tbl,{val,if online=-1 then Order.Descending else Order.Ascending}),
     lst = Table.ToList(if online=0 then tbl else sort,(x)=>x),
     n = Number.Round(List.Sum(Table.Column(tbl,val))/nom),
     seed = if mode=0 then List.Repeat({0 meta [art={}]},n) else {},
