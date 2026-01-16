@@ -140,7 +140,7 @@ fxTableSetColumnTypes=[func=(tbl as table,optional options as record) as table=>
     tr = if options[transform]?=null then true else options[transform],
     f_val = if options[deep]?=true then g else Value.Type,
     f_tr = if tr then (x)=>f_val(Value.FromText(x,cul)) else f_val,
-    f_lst = (x)=>Type.Union(List.Transform(x,f_tr)),
+    f_lst = (x)=>((a)=>if a=Null.Type then Any.Type else a)(Type.Union(List.Transform(x,f_tr))),
     
     g=(x)=>if x is number then if Number.Mod(x,1)=0 then Int64.Type else Number.Type
             else if x is datetime then 
