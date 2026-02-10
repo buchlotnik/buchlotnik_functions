@@ -21,14 +21,14 @@
     
     Get=(rec,key)=>Record.FieldOrDefault(rec,key,0),
 
-   GetDeep=(rec,lst)=>((a)=>if a=null then 0 else a)(List.Accumulate(lst,rec,(s,c)=>Record.FieldOrDefault(s,c))),
+    GetDeep=(rec,lst)=>((a)=>if a=null then 0 else a)(List.Accumulate(lst,rec,(s,c)=>Record.FieldOrDefault(s,c))),
 
     Set=(rec,key,val)=>
         if Record.HasFields(rec,key)
         then Record.TransformFields(rec,{key,(old)=>val})
         else Record.AddField(rec,key,val),
 
-   SetDeep = (rec as record, lst as list,val) =>
+    SetDeep = (rec as record, lst as list,val) =>
          if List.Count(lst) = 1 then
                 if Record.HasFields(rec,lst{0}) 
                 then Record.TransformFields(rec,{lst{0},(x)=>val})
@@ -52,7 +52,8 @@
                 if Record.HasFields(rec,lst{0}) 
                 then Record.TransformFields(rec,{lst{0},(x) => @UpdateDeep(x,List.Skip(lst),val)})
                 else Record.AddField(rec,lst{0},CreatePath(List.Skip(lst),val)),
-    
+
+    MoveDeep=(rec,pathfrom,pathto,val)=>UpdateDeep(UpdateDeep(rec,pathfrom,-val),pathto,val),    
 
     Run=(tbl,func,optional init,optional slct)=>[
             init=if init=null then [] else init,
@@ -67,8 +68,6 @@
                 out=[i=i]&new][out],
             gen=List.Generate(step,(x)=>x[i]<n,step,slct),
             to=Table.FromRecords(gen)][to],
-            
-    
 
     CreatePath=(lst as list,val) =>Record.AddField([],lst{0},if List.Count(lst) = 1 then val else @CreatePath(List.Skip(lst),val))
 ]
