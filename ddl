@@ -15,7 +15,7 @@
                                                     else @internalfunc(List.Skip(lst),val-lst{0}[количество],lstout&{lst{0}}),
                                     res=internalfunc(lst,val,{})][res],
 
-    CreatePath=(lst as list,val) =>Record.AddField([],lst{0},if List.Count(lst) = 1 then val else @CreatePath(List.Skip(lst),val)),
+    CreatePath=(lst,val) =>Record.AddField([],lst{0},if List.Count(lst) = 1 then val else @CreatePath(List.Skip(lst),val)),
     
     Get=(rec,key)=>Record.FieldOrDefault(rec,key,0),
 
@@ -86,7 +86,7 @@
         then Record.TransformFields(rec,{key,(old)=>val})
         else Record.AddField(rec,key,val),
 
-    SetDeep = (rec as record, lst as list,val) =>
+    SetDeep = (rec, lst,val) =>
          if List.Count(lst) = 1 then
                 if Record.HasFields(rec,lst{0}) 
                 then Record.TransformFields(rec,{lst{0},(x)=>val})
@@ -101,7 +101,7 @@
         then Record.TransformFields(rec,{key,(old)=>old+delta})
         else Record.AddField(rec,key,delta),
     
-    UpdateDeep = (rec as record, lst as list,val) =>
+    UpdateDeep = (rec, lst,val) =>
          if List.Count(lst) = 1 then
                 if Record.HasFields(rec,lst{0}) 
                 then Record.TransformFields(rec,{lst{0},(x)=> x+val})
