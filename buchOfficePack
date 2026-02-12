@@ -62,7 +62,7 @@ fxGetMCode=(file)=>
     data = BinaryFormat.Choice(BinaryFormat.Binary(8),(x)=>BinaryFormat.Binary(u32(Binary.Range(x,4,4))))(bin),
     unz = fxUnzip(data){[Name="Formulas/Section1.m"]}[Value],
     txt = Text.FromBinary(unz)&"#(cr,lf)",
-    splt = Text.Split(txt,";#(cr,lf)"),
+    splt = Text.Split(txt,";"),
     lst = List.Range(splt,1,List.Count(splt)-2),
     tbl = Table.FromList(lst,f,{"Name","Value"}),
     to = if from=null then #table({"Name","Value"},{{null,null}}) else tbl][to],
