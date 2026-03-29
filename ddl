@@ -23,10 +23,11 @@
     
     MakeDictDeep=(tbl)=>Run(tbl,(s,c)=>[newdict=SetDeep(s,List.RemoveLastN(c,1),List.Last(c))],[],(x)=>x,true),
 
-    MakeDictDeepFIFO = (tbl,grplst,dictQtyName,rowQtyName,optional metadataFieldNames)=>[
+    MakeDictDeepFIFO = (tbl,grplst,dictQtyName,rowQtyName,optional metadataFieldNames, optional sortField, optional sortOrder)=>[
                 nms = if metadataFieldNames=null then List.Buffer(List.RemoveMatchingItems(Table.ColumnNames(tbl),{rowQtyName})) else metadataFieldNames,
+                func= if sortField=null then (x)=>x else if sortOrder=null then (x)=>Table.Sort(x,{sortField}) else (x)=>Table.Sort(x,{{sortField,sortOrder}}),
                 gr = Table.Group(tbl,grplst,{"tmp",(x)=>
-                [       stock=Table.TransformRows(x,(row)=>Record.AddField([],dictQtyName,Record.Field(row,rowQtyName))&[metadata=Record.SelectFields(row,nms)]),
+                [       stock=Table.TransformRows(func(x),(row)=>Record.AddField([],dictQtyName,Record.Field(row,rowQtyName))&[metadata=Record.SelectFields(row,nms)]),
                         queue={}]}),
                 res = MakeDictDeep(gr)][res],
     
@@ -41,7 +42,8 @@
                         queue=ConsumeFIFO(oldDict[queue],Record.Field(row,rowQqtyName),dictQtyName),
                         new_queue=queue[stock],
                         gap = queue[gap],
-                        new_stock=oldDict[stock]&(if gap>0 then {Record.AddField([],dictQtyName,gap)&[metadata=Record.SelectFields(row,nms)]} else {}),
+                        unsorted_stock=oldDict[stock]&(if gap>0 then {Record.AddField([],dictQtyName,gap)&[metadata=Record.SelectFields(row,nms)]} else {}),
+                        new_stock = if sortField=null then unsorted_stock else List.Sort(unsorted_stock,{(x)=>Record.FieldOrDefault(x[metadata],sortField),order}),
                         out=queue[out]
                 ]
                         else 
