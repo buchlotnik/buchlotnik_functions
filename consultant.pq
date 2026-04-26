@@ -1,7 +1,7 @@
 (optional year as nullable number) =>
    [path = "http://www.consultant.ru/law/ref/calendar/proizvodstvennye/",
     yr = if year=null then Date.Year(DateTime.LocalNow()) else year, 
-    from = Text.FromBinary(Web.Contents(path&Text.From(yr)&(if yr = 2020 then "b" else ""))),
+    from = Text.FromBinary(Web.Contents(path&Text.From(yr)&(if (yr = 2020 or yr = 2024) then "b" else ""))),
     splt = List.Skip(Text.Split(from,"#(tab,tab,tab)<td class=")),
     lst=List.Zip({{1..12},splt}),
     f=(x)=>[a=Text.Split(x{1},"<td class="),
